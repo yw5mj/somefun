@@ -11,6 +11,8 @@ run_deals = True
 all_category = False
 # Minimal time allowed every request
 time_delta = 0.5
+# Output filename
+fname = 'deals'
 
 def request_page(url,
                  headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"},
@@ -96,7 +98,9 @@ if __name__ == '__main__':
         all_category = ('ALL_CATEGORY' in sys.argv)
         if not run_deals: print("WARNING: ALL_PRICE enabled.")
         if all_category: print("WARNING: ALL_CATEGORY enabled.")
-    outf = output_dir + 'deals.txt'
+        fnames = [i[13:] for i in sys.argv if 'OUT_FILENAME=' in i]
+        if fnames: fname = fnames[-1]
+    outf = output_dir + fname + '.txt'
     os.makedirs(output_dir, exist_ok=True)
     os.system('rm -f {}'.format(outf))
     refs = scan_all_cat('/SiteMapDisplayView')
