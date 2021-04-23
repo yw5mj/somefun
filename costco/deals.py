@@ -86,7 +86,7 @@ def scan_all_cat(url):
 
 if __name__ == '__main__':
     refs = scan_all_cat('/SiteMapDisplayView')
-    os.makedirs(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
     outf = output_dir + 'deals.txt'
     if len(sys.argv) > 1 and sys.argv[1] == 'all':
         run_deals = False
