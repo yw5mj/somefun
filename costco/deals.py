@@ -9,13 +9,14 @@ run_deals = True
 # Only scan 1 product category selected at run time
 # If False then scan through all Costco products
 all_category = False
+# Minimal time allowed every request
+time_delta = 0.5
 
 def request_page(url,
                  headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"},
-                 timeout = 10,
-                 delta = 0.2):
-    start=time.time()
-    fail=True
+                 timeout = 10):
+    start = time.time()
+    fail = True
     while fail:
         fail = False
         try:
@@ -25,9 +26,9 @@ def request_page(url,
         except:
             print("WARNING: Bad request at {0}, retrying...".format(url))
             time.sleep(30)
-            fail=True
-    if time.time()-start<delta:
-        time.sleep(delta-(time.time()-start))
+            fail = True
+    if time.time() - start < time_delta:
+        time.sleep(time_delta - (time.time() - start))
     return res
 
 def error_log(log):
