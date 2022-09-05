@@ -1,7 +1,7 @@
 #! /bin/bash
 #
 # Usage:
-#   run.sh [ALL_PRICE] [ALL_CATEGORY] [OUT_FILENAME=FILENAME]
+#   run.sh [ALL_PRICE] [ALL_CATEGORY] [SHEET_NAME=SHEET_NAME]
 
-source $VENV/web/bin/activate
+source $VENV/gcp/bin/activate
 python deals.py $@

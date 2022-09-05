@@ -2,6 +2,8 @@
 
 import requests
 import time, sys, os
+import gspread, gspread_formatting
+
 costco_url = 'https://www.costco.com'
 output_dir = 'output/'
 # Only save deals, if False then save all prices
@@ -12,8 +14,8 @@ all_category = False
 # Minimal time allowed every request
 time_delta = 0.5
 # Output filename
-fname = 'deals'
-
+sheetname = 'deals'
+image_url_prefix = 'https://images.costco-static.com/ImageDelivery'
 def request_page(url,
                  headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"},
                  timeout = 10):
@@ -49,11 +51,19 @@ def scan_one_page(page, res):
             scan_all_page(url, res)
     for item in items:
         try:
+            price = item.split('<div class="price"')[1].split('$')[1].split('\n')[0]
+            if run_deals and price[-1:] != '7': continue
             name = item.split('value="')[1].split('" />')[0]
-            price = item.split('<div class="price" id="price-')[1].split('$')[1].split('\n')[0]
-            if run_deals and price[-3:] == '.99': continue
-            url = item.split('<a href="')[1].split('"')[0]
-            res[name] = (price, url)
+            price = '=HYPERLINK("{}","{}")'.format(
+                item.split('<a href="')[1].split('"')[0],
+                price
+                )
+            image = '=IMAGE("{}{}")'.format(
+                image_url_prefix,
+                item.split('src="{}'.format(image_url_prefix))[1].split('"')[0]
+                )
+            res.append([name, price, image])
+
         except Exception as e:
             print('\t>> ERROR running scan_one_page: ', e)
             print('\t>> logfile: {}'.format(error_log(item)))
@@ -70,14 +80,12 @@ def scan_all_page(url, res):
             print('\t>> ERROR running scan_all_page: ', e)
             print('\t>> logfile: {}'.format(error_log(url_raw)))
 
-def scan_one_cat(urls, outf='deals.txt'):
-    res = {}
+def scan_one_cat(urls, sheet):
+    res = []
     for url in urls:
         print('> getting {}'.format(url))
         scan_all_page(url, res)
-    with open(outf, 'a+') as f:
-        for i in res:
-            f.write('name: {0}\n\t price: {1}\n\t url: {2}\n\n'.format(i, res[i][0], res[i][1]))
+    sheet.append_rows(res, value_input_option='USER_ENTERED')
 
 def scan_all_cat(url):
     page = request_page(url)
@@ -98,11 +106,17 @@ if __name__ == '__main__':
         all_category = ('ALL_CATEGORY' in sys.argv)
         if not run_deals: print("WARNING: ALL_PRICE enabled.")
         if all_category: print("WARNING: ALL_CATEGORY enabled.")
-        fnames = [i[13:] for i in sys.argv if 'OUT_FILENAME=' in i]
-        if fnames: fname = fnames[-1]
-    outf = output_dir + fname + '.txt'
+        sheetnames = [i[11:] for i in sys.argv if 'SHEET_NAME=' in i]
+        if sheetnames: sheetname = sheetnames[-1]
+    client = gspread.service_account()
+    f = client.open("costco clearance")
+    if sheetname in [i.title for i in f.worksheets()]:
+        f.del_worksheet(f.worksheet(sheetname))
+    sheet = f.add_worksheet(sheetname,1,3)
     os.makedirs(output_dir, exist_ok=True)
-    os.system('rm -f {}'.format(outf))
     refs = scan_all_cat('/SiteMapDisplayView')
-    for r in refs: scan_one_cat(r, outf)
-    
+    for r in refs:
+        scan_one_cat(r, sheet)
+    gspread_formatting.set_row_height(sheet, '1:1000', 150)
+    gspread_formatting.set_column_width(sheet, 'A', 400)
+    gspread_formatting.set_column_width(sheet, 'C', 150)
